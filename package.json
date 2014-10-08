@@ -1,0 +1,35 @@
+{
+  "name": "hubot-github-notify",
+  "description": "Hubot script to notify users of comment mentions, issues/PRs assignments",
+  "version": "0.0.1",
+  "author": "Francesco Pontillo <francescopontillo@gmail.com>",
+  "license": "Apache-2.0",
+  "keywords": [
+    "hubot",
+    "hubot-scripts",
+    "github",
+    "notification",
+    "notify"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/frapontillo/hubot-github-notify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/frapontillo/hubot-github-notify/issues"
+  },
+  "dependencies": {
+    "coffee-script": "~1.6",
+    "githubot": "^1.0.0-beta2"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "chai": "*",
+    "sinon-chai": "*",
+    "sinon": "*"
+  },
+  "main": "index.coffee",
+  "scripts": {
+    "test": "sh script/test"
+  }
+}
