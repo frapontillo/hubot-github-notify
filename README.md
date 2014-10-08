@@ -1,6 +1,7 @@
-# Hubot GitHub Notify
+hubot-github-notify
+===================
 
-Notify users of comment mentions, issues/PRs assignments
+Hubot script to notify users of GitHub comment mentions, issues/PRs assignments
 
 [![Build Status](https://travis-ci.org/frapontillo/hubot-github-notify.png)](https://travis-ci.org/frapontillo/hubot-github-notify)
 
