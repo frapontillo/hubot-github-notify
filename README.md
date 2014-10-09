@@ -48,14 +48,14 @@ fra> hubot who am i
 hubot> fra: You are known as frapontillo on GitHub
 ```
 
-`hubot-github-notify` will honor these credentials before the ones in the environment variables, finally falling back 
+`hubot-github-notify` will honor these credentials before the ones in the environment variables, eventually falling back 
 to the original (chat) username.
 
 ### Usage
 
 #### Notify to mentions/assignments
 
-You can notify to mentions by telling hubot something like:
+You can get notified of mentions by telling hubot something like:
 
 ```
 user> hubot notify me of mentions in some_user/some_repo
