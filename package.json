@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "coffee-script": "~1.6",
-    "githubot": "^1.0.0-beta2"
+    "githubot": "^1.0.0-beta2",
+    "lodash": "^2.4.1"
   },
   "devDependencies": {
     "mocha": "*",
