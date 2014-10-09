@@ -8,6 +8,9 @@ describe 'github-notify', ->
   beforeEach ->
     @robot =
       respond: sinon.spy()
+      router: {
+        post: sinon.spy()
+      }
 
     require('../src/github-notify')(@robot)
 

@@ -6,7 +6,6 @@
 #   "lodash": "^2.4.1"
 #
 # Configuration:
-#   HUBOT_GITHUB_TOKEN
 #   HUBOT_GITHUB_USER for a default user, in case it is missing from a repository definition
 #   HUBOT_GITHUB_USER_(.*) to map chat users to GitHub users
 #
@@ -57,6 +56,10 @@ GITHUB_NOTIFY_PRE = 'github-notify-'
 #   - GitHub credentials as handled by the github-credentials.coffee script
 #   - environment variables in the form of HUBOT_GITHUB_USER_.*
 #   - the exact chat name
+#
+# user - The chat username to be resolved
+#
+# Returns the resolved username.
 resolve_user = (user) ->
   name = user.name.replace('@', '')
   resolve_cred = (u) -> u.githubLogin
@@ -64,7 +67,14 @@ resolve_user = (user) ->
   resolve_cred(user) or resolve_env(name) or resolve_env(name.split(' ')[0]) or name
 
 # Resolve all parameters for a given subscription/unsubscription request:
-# chat user, qualified GitHub user, kind of notification, repository, qualified GitHub repository
+# chat user, qualified GitHub user, kind of notification, repository, qualified GitHub repository.
+#
+# github - An instantiated githubot object
+# msg - The current message to be parsed
+# kindPos - The position of the notification type in the message template
+# repoPos - The position of the repository in the message template
+#
+# Returns an object containing user, qualified_user, repo, qualified_repo
 resolve_params = (github, msg, kindPos, repoPos) ->
   kindPos = kindPos or 3
   repoPos = repoPos or 4
@@ -79,7 +89,12 @@ resolve_params = (github, msg, kindPos, repoPos) ->
   }
 
 # Add a notification to the user settings, checking that all other notifications of the same kind
-# don't overlap with the new one (highest priority, same exact notification, etc.)
+# don't overlap with the new one (highest priority, same exact notification, etc.).
+#
+# robot - The current instance of hubot
+# params - The current request parameters, as submitted by the user
+#
+# Returns nothing.
 add_notification = (robot, params) ->
   # get all specific notifications of user
   userSettings = _.find(robot.brain.get(GITHUB_NOTIFY_PRE + params.kind), {userName: params.qualified_user}) or {}
@@ -116,7 +131,12 @@ add_notification = (robot, params) ->
   # update the user info
   robot.brain.set GITHUB_NOTIFY_PRE + params.kind, newSettings
 
-# Remove a notification from the user settings, if it exists, otherwise it throws an appropriate Error
+# Remove a notification from the user settings, if it exists, otherwise it throws an appropriate Error.
+#
+# robot - The current instance of hubot
+# params - The current request parameters, as submitted by the user
+#
+# Returns nothing.
 remove_notification = (robot, params) ->
   # get all specific notifications of user
   userSettings = _.find(robot.brain.get(GITHUB_NOTIFY_PRE + params.kind), {userName: params.qualified_user}) or {}
@@ -126,9 +146,8 @@ remove_notification = (robot, params) ->
   # if the notification is for every repo, remove all the notifications of the same kind
   if not params.qualified_repo?
     userNotifications.length = 0
-    throw new Error("You have no notifications set up for #{params.kind}.") if deleted?.length <= 0
   else
-    deleted = _.remove(userNotifications, params.qualified_repo)
+    deleted = _.remove(userNotifications, (n) -> n is params.qualified_repo)
     throw new Error("You have no notifications set up for #{params.kind} in #{params.qualified_repo}.") if deleted?.length <= 0
 
   # build the new userSettings
@@ -145,7 +164,14 @@ remove_notification = (robot, params) ->
   # update the user info
   robot.brain.set GITHUB_NOTIFY_PRE + params.kind, newSettings
 
-# Handle a generic comment, it can be the first of the issue (the issue itself) or any next comment
+# Handle a generic comment, it can be the first of the issue (the issue itself) or any next comment.
+#
+# robot - The current instance of hubot
+# comment - The issue or comment object to find users mentions in
+# repository - The repository object
+# users - All users that match the notification type we're interested in
+#
+# Returns an Array of User objects, as handled by hubot.
 on_commented_issue = (robot, comment, repository, users) ->
   userInfos = []
   # find all users that want to be notified of mentions
@@ -159,7 +185,14 @@ on_commented_issue = (robot, comment, repository, users) ->
   # return the array
   userInfos
 
-# Handle a generic comment, it can be the first of the issue (the issue itself) or any next comment
+# Handle a generic comment, it can be the first of the issue (the issue itself) or any next comment.
+#
+# robot - The current instance of hubot
+# assignee - The assignee of the fetched object
+# repository - The repository object
+# users - All users that match the notification type we're interested in
+#
+# Returns an Array of User objects, as handled by hubot.
 on_assigned_issue = (robot, assignee, repository, users) ->
   userInfos = []
   # find all users that want to be notified of mentions
@@ -182,10 +215,11 @@ module.exports = (robot) ->
     params = resolve_params github, msg
     try
       add_notification(robot, params)
-      robot.brain.save
       reply = "You will now receive notifications for #{params.kind} #{(if params.qualified_repo? then 'in ' + params.qualified_repo else 'everywhere')}."
     catch error
       reply = error
+    finally
+      robot.brain.save
     robot.send params.user, reply
 
   # handle notification unsubscriptions
@@ -193,10 +227,11 @@ module.exports = (robot) ->
     params = resolve_params github, msg
     try
       remove_notification(robot, params)
-      robot.brain.save
       reply = "You will no longer receive notifications for #{params.kind} #{(if params.qualified_repo? then 'in ' + params.repo else 'anywhere')}."
     catch error
       reply = error
+    finally
+      robot.brain.save
     robot.send params.user, reply
 
   # handle notification subscription listing
@@ -227,10 +262,12 @@ module.exports = (robot) ->
 
     # discriminate the payload according to the action type
     if (event is 'issues' and payload.action is 'opened')
+      # TODO: check when PRs are opened
       userInfos = on_commented_issue(robot, payload.issue, payload.repository, mentions_users)
       userInfos.forEach (userInfo) ->
         robot.send userInfo, "You have been mentioned in a new issue by #{payload.issue.user.login} in #{payload.repository.full_name}: #{payload.issue.html_url}."
     else if (event is 'issue_comment' and payload.action is 'created')
+      # TODO: check when PRs are commented on
       userInfos = on_commented_issue(robot, payload.comment, payload.repository, mentions_users)
       userInfos.forEach (userInfo) ->
         robot.send userInfo, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
@@ -239,9 +276,10 @@ module.exports = (robot) ->
       userInfos.forEach (userInfo) ->
         robot.send userInfo, "You have been assigned to an issue in #{payload.repository.full_name}: #{payload.issue.html_url}."
     else if (event is 'pull_request' and payload.action is 'assigned')
+      # TODO: check this fella, if OK merge with previous condition check
       userInfos = on_assigned_issue(robot, payload.assignee, payload.repository, assignments_users)
       userInfos.forEach (userInfo) ->
         robot.send userInfo, "You have been assigned to a PR in #{payload.repository.full_name}: #{payload.issue.html_url}."
 
-    res.send 'OK, YOLO'
+    res.send 'HOLO YOLO'
 
