@@ -55,7 +55,7 @@ GITHUB_NOTIFY_PRE = 'github-notify-'
 # Resolve user name to a potential GitHub username by using, in order:
 #   - GitHub credentials as handled by the github-credentials.coffee script
 #   - environment variables in the form of HUBOT_GITHUB_USER_.*
-#   - the exact chat name
+#   - throws an Error if the username can't be matched
 #
 # user - The chat username to be resolved
 #
@@ -64,7 +64,8 @@ resolve_user = (user) ->
   name = user.name.replace('@', '')
   resolve_cred = (u) -> u.githubLogin
   resolve_env = (n) -> process.env["HUBOT_GITHUB_USER_#{n.replace(/\s/g, '_').toUpperCase()}"]
-  resolve_cred(user) or resolve_env(name) or resolve_env(name.split(' ')[0]) or name
+  resolve_cred(user) or resolve_env(name) or resolve_env(name.split(' ')[0]) or
+  throw new Error("Sorry, I can't find any GitHub logins for #{name}. You can specify one by telling me 'i am githubusername'.")
 
 # Resolve all parameters for a given subscription/unsubscription request:
 # chat user, qualified GitHub user, kind of notification, repository, qualified GitHub repository.
@@ -206,48 +207,84 @@ on_assigned_issue = (robot, assignee, repository, users) ->
   # return the array
   userInfos
 
+# Send a private message to multiple users.
+#
+# robot - The current robot instance
+# user - A User array, each one is as stored in a `respond` msg object
+# message - The private message String
+#
+# Returns nothing.
+private_messages = (robot, users, message) ->
+  users.forEach (user) ->
+    private_message robot, user, message
+
+# Send a private message to a given user.
+#
+# robot - The current robot instance
+# user - A User, as stored in a `respond` msg object
+# message - The private message String
+#
+# Returns nothing.
+private_message = (robot, user, message) ->
+  user = get_pm_user user
+  robot.send {user: user}, message
+
+# Delete the reply_to information from a given User,
+# so that it is possible to force a private message on send.
+#
+# user - A User instance
+#
+# Returns nothing.
+get_pm_user = (user) ->
+  delete user.reply_to
+  user
+
 module.exports = (robot) ->
 
   github = require('githubot')(robot)
 
   # handle notification subscriptions
   robot.respond NOTIFY_REGEX, (msg) ->
-    params = resolve_params github, msg
     try
+      params = resolve_params github, msg
       add_notification(robot, params)
       reply = "You will now receive notifications for #{params.kind} #{(if params.qualified_repo? then 'in ' + params.qualified_repo else 'everywhere')}."
     catch error
       reply = error
     finally
       robot.brain.save
-    robot.send params.user, reply
+      private_message robot, get_pm_user(msg.message.user), reply
 
   # handle notification unsubscriptions
   robot.respond UNNOTIFY_REGEX, (msg) ->
-    params = resolve_params github, msg
     try
+      params = resolve_params github, msg
       remove_notification(robot, params)
       reply = "You will no longer receive notifications for #{params.kind} #{(if params.qualified_repo? then 'in ' + params.repo else 'anywhere')}."
     catch error
       reply = error
     finally
       robot.brain.save
-    robot.send params.user, reply
+      private_message robot, get_pm_user(msg.message.user), reply
 
   # handle notification subscription listing
   robot.respond LIST_REGEX, (msg) ->
-    params = resolve_params github, msg, 2
-    # get the notifications
-    userSettings = _.find(robot.brain.get(GITHUB_NOTIFY_PRE + params.kind), {userName: params.qualified_user}) or {}
-    userNotifications = userSettings.userNotifications or []
-    # build an appropriate response by joining all checked repositories
-    if userNotifications?.length > 0
-      s = _.map(userNotifications, (n) ->
-        if n is true then 'every repository' else n
-      ).join(', ')
-      reply = "You will receive notifications for #{params.kind} in #{s}."
-    else reply = "You will receive no notifications for #{params.kind}."
-    robot.send params.user, reply
+    try
+      params = resolve_params github, msg, 2
+      # get the notifications
+      userSettings = _.find(robot.brain.get(GITHUB_NOTIFY_PRE + params.kind), {userName: params.qualified_user}) or {}
+      userNotifications = userSettings.userNotifications or []
+      # build an appropriate response by joining all checked repositories
+      if userNotifications?.length > 0
+        s = _.map(userNotifications, (n) ->
+          if n is true then 'every repository' else n
+        ).join(', ')
+        reply = "You will receive notifications for #{params.kind} in #{s}."
+      else reply = "You will receive no notifications for #{params.kind}."
+    catch error
+      reply = error
+    finally
+      private_message robot, get_pm_user(msg.message.user), reply
 
   # handle new comments and new issue assignments
   robot.router.post '/hubot/gh-notify', (req, res) ->
@@ -264,22 +301,18 @@ module.exports = (robot) ->
     if (event is 'issues' and payload.action is 'opened')
       # TODO: check when PRs are opened
       userInfos = on_commented_issue(robot, payload.issue, payload.repository, mentions_users)
-      userInfos.forEach (userInfo) ->
-        robot.send userInfo, "You have been mentioned in a new issue by #{payload.issue.user.login} in #{payload.repository.full_name}: #{payload.issue.html_url}."
+      private_messages robot, userInfos, "You have been mentioned in a new issue by #{payload.issue.user.login} in #{payload.repository.full_name}: #{payload.issue.html_url}."
     else if (event is 'issue_comment' and payload.action is 'created')
       # TODO: check when PRs are commented on
       userInfos = on_commented_issue(robot, payload.comment, payload.repository, mentions_users)
-      userInfos.forEach (userInfo) ->
-        robot.send userInfo, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
+      private_messages robot, userInfos, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
     else if (event is 'issues' and payload.action is 'assigned')
       userInfos = on_assigned_issue(robot, payload.assignee, payload.repository, assignments_users)
-      userInfos.forEach (userInfo) ->
-        robot.send userInfo, "You have been assigned to an issue in #{payload.repository.full_name}: #{payload.issue.html_url}."
+      private_messages robot, userInfos, "You have been assigned to an issue in #{payload.repository.full_name}: #{payload.issue.html_url}."
     else if (event is 'pull_request' and payload.action is 'assigned')
       # TODO: check this fella, if OK merge with previous condition check
       userInfos = on_assigned_issue(robot, payload.assignee, payload.repository, assignments_users)
-      userInfos.forEach (userInfo) ->
-        robot.send userInfo, "You have been assigned to a PR in #{payload.repository.full_name}: #{payload.issue.html_url}."
+      private_messages robot, userInfos, "You have been assigned to a PR in #{payload.repository.full_name}: #{payload.issue.html_url}."
 
     res.send 'HOLO YOLO'
 
