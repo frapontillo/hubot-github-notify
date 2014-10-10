@@ -1,7 +1,10 @@
 hubot-github-notify 
 ===================
 
-[![Build Status](https://travis-ci.org/frapontillo/hubot-github-notify.png)](https://travis-ci.org/frapontillo/hubot-github-notify)
+[![NPM version][npm-version-image]][npm-url]
+[![Apache License][license-image]][license-url]
+[![Build Status][travis-image]][travis-url]
+[![NPM downloads][npm-downloads-image]][npm-url]
 
 Hubot script to notify users of GitHub comment mentions, issues/PRs assignments.
 
@@ -13,7 +16,7 @@ Install `hubot-github-notify` as a npm dependency:
 npm install hubot-github-notify --save
 ```
 
-Then, edit your hubot's `external-scripts.json` and add `node_modules/hubot-github-notify/index.coffee` to the array.
+Then, edit your hubot's `external-scripts.json` and add `hubot-github-notify` to the array.
 
 ### Configuration
 
@@ -140,3 +143,13 @@ Pull requests are most welcome, remember to always submit them against the `deve
    See the License for the specific language governing permissions and
    limitations under the License.
 ```
+
+[license-image]: http://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat
+[license-url]: LICENSE
+
+[npm-url]: https://npmjs.org/package/hubot-github-notify
+[npm-version-image]: http://img.shields.io/npm/v/hubot-github-notify.svg?style=flat
+[npm-downloads-image]: http://img.shields.io/npm/dm/hubot-github-notify.svg?style=flat
+
+[travis-url]: https://travis-ci.org/frapontillo/hubot-github-notify
+[travis-image]: http://img.shields.io/travis/frapontillo/hubot-github-notify/master.svg?style=flat
