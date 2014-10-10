@@ -298,21 +298,27 @@ module.exports = (robot) ->
     assignments_users = robot.brain.get(GITHUB_NOTIFY_PRE + 'assignments')
 
     # discriminate the payload according to the action type
-    if (event is 'issues' and payload.action is 'opened')
-      # TODO: check when PRs are opened
-      userInfos = on_commented_issue(robot, payload.issue, payload.repository, mentions_users)
-      private_messages robot, userInfos, "You have been mentioned in a new issue by #{payload.issue.user.login} in #{payload.repository.full_name}: #{payload.issue.html_url}."
+    if ((event is 'issues' or event is 'pull_request') and payload.action is 'opened')
+      if event is 'issues'
+        issue = payload.issue
+        new_what = 'issue'
+      else
+        issue = payload.pull_request
+        new_what = 'PR'
+      userInfos = on_commented_issue(robot, issue, payload.repository, mentions_users)
+      private_messages robot, userInfos, "You have been mentioned in a new #{new_what} by #{issue.user.login} in #{payload.repository.full_name}: #{issue.html_url}."
     else if (event is 'issue_comment' and payload.action is 'created')
-      # TODO: check when PRs are commented on
       userInfos = on_commented_issue(robot, payload.comment, payload.repository, mentions_users)
       private_messages robot, userInfos, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
-    else if (event is 'issues' and payload.action is 'assigned')
+    else if ((event is 'issues' or event is 'pull_request') and payload.action is 'assigned')
+      if event is 'issues'
+        issue = payload.issue
+        new_what = 'an issue'
+      else
+        issue = payload.pull_request
+        new_what = 'a PR'
       userInfos = on_assigned_issue(robot, payload.assignee, payload.repository, assignments_users)
-      private_messages robot, userInfos, "You have been assigned to an issue in #{payload.repository.full_name}: #{payload.issue.html_url}."
-    else if (event is 'pull_request' and payload.action is 'assigned')
-      # TODO: check this fella, if OK merge with previous condition check
-      userInfos = on_assigned_issue(robot, payload.assignee, payload.repository, assignments_users)
-      private_messages robot, userInfos, "You have been assigned to a PR in #{payload.repository.full_name}: #{payload.issue.html_url}."
+      private_messages robot, userInfos, "You have been assigned to #{new_what} in #{payload.repository.full_name}: #{issue.html_url}."
 
     res.send 'HOLO YOLO'
 

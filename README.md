@@ -48,8 +48,8 @@ fra> hubot who am i
 hubot> fra: You are known as frapontillo on GitHub
 ```
 
-`hubot-github-notify` will honor these credentials before the ones in the environment variables, eventually falling back 
-to the original (chat) username.
+`hubot-github-notify` will honor these credentials before the ones in the environment variables; if no mapping is 
+eventually found, an error is shown to the user.
 
 ### Usage
 
