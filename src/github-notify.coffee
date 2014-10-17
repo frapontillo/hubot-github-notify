@@ -227,7 +227,11 @@ private_messages = (robot, users, message) ->
 # Returns nothing.
 private_message = (robot, user, message) ->
   user = get_pm_user user
-  robot.send {user: user}, message
+  channel = process.env["HUBOT_GITHUB_CHANNEL"]
+  if channel
+    robot.send {room: channel}, '@'+ user.name + ': ' + message
+  else
+    robot.send {user: user}, message
 
 # Delete the reply_to information from a given User,
 # so that it is possible to force a private message on send.
