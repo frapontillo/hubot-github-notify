@@ -229,7 +229,7 @@ private_message = (robot, user, message) ->
   user = get_pm_user user
   channel = process.env["HUBOT_GITHUB_CHANNEL"]
   if channel
-    robot.send {room: channel}, '@'+ user + ': ' + message
+    robot.send {room: channel}, '@'+ user.name + ': ' + message
   else
     robot.send {user: user}, message
 
