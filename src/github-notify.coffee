@@ -289,7 +289,7 @@ module.exports = (robot) ->
   # handle new comments and new issue assignments
   robot.router.post '/hubot/gh-notify', (req, res) ->
     payload = req.body
-    # event can be issues, issue_comment, pull_request
+    # event can be issues, issue_comment, pull_request, pull_request_review_comment
     event = req.headers['x-github-event']
 
     # get users who subscribed for mentions
@@ -307,7 +307,7 @@ module.exports = (robot) ->
         new_what = 'PR'
       userInfos = on_commented_issue(robot, issue, payload.repository, mentions_users)
       private_messages robot, userInfos, "You have been mentioned in a new #{new_what} by #{issue.user.login} in #{payload.repository.full_name}: #{issue.html_url}."
-    else if (event is 'issue_comment' and payload.action is 'created')
+    else if ((event is 'issue_comment' or event is 'pull_request_review_comment') and payload.action is 'created')
       userInfos = on_commented_issue(robot, payload.comment, payload.repository, mentions_users)
       private_messages robot, userInfos, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
     else if ((event is 'issues' or event is 'pull_request') and payload.action is 'assigned')
