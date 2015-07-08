@@ -284,7 +284,7 @@ module.exports = (robot) ->
     catch error
       reply = error
     finally
-      private_message robot, get_pm_user(msg.message.user), reply
+      private_message robot, get_pm_user(msg.message.user.name), reply
 
   # handle new comments and new issue assignments
   robot.router.post '/hubot/gh-notify', (req, res) ->
