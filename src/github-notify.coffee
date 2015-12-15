@@ -179,7 +179,7 @@ on_commented_issue = (robot, comment, repository, users) ->
   for user in users
     userName = user.userName
     # match the repository first, as it usually is the easier check
-    match_repo = user.userNotifications.indexOf(true) >= 0 or user.userNotifications.indexOf(repository.full_name) >= 0
+    match_repo = user.userNotifications.indexOf(true) >= 0 or user.userNotifications.indexOf(repository.full_name.toLowerCase()) >= 0
     # after matching repo, also match for a mention
     if match_repo is true and comment.body.indexOf('@' + userName) >= 0
       userInfos.push user.userInfo
@@ -200,7 +200,7 @@ on_assigned_issue = (robot, assignee, repository, users) ->
   for user in users
     userName = user.userName
     # match the repository first, as it usually is the easier check
-    match_repo = user.userNotifications.indexOf(true) >= 0 or user.userNotifications.indexOf(repository.full_name) >= 0
+    match_repo = user.userNotifications.indexOf(true) >= 0 or user.userNotifications.indexOf(repository.full_name.toLowerCase()) >= 0
     # after matching repo, also match for a mention
     if match_repo is true and assignee.login is userName
       userInfos.push user.userInfo
@@ -306,10 +306,10 @@ module.exports = (robot) ->
         issue = payload.pull_request
         new_what = 'PR'
       userInfos = on_commented_issue(robot, issue, payload.repository, mentions_users)
-      private_messages robot, userInfos, "You have been mentioned in a new #{new_what} by #{issue.user.login} in #{payload.repository.full_name}: #{issue.html_url}."
+      private_messages robot, userInfos, "You have been mentioned in a new #{new_what} by #{issue.user.login} in #{payload.repository.full_name.toLowerCase()}: #{issue.html_url}."
     else if ((event is 'issue_comment' or event is 'pull_request_review_comment') and payload.action is 'created')
       userInfos = on_commented_issue(robot, payload.comment, payload.repository, mentions_users)
-      private_messages robot, userInfos, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name}: #{payload.comment.html_url}."
+      private_messages robot, userInfos, "You have been mentioned in a new comment by #{payload.comment.user.login} in #{payload.repository.full_name.toLowerCase()}: #{payload.comment.html_url}."
     else if ((event is 'issues' or event is 'pull_request') and payload.action is 'assigned')
       if event is 'issues'
         issue = payload.issue
